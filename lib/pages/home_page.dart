@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_application/auth.dart';
+import 'package:flutter_application/pages/live_map_screen.dart';
 
 class HomePage extends StatelessWidget {
   HomePage({super.key});
@@ -10,6 +11,11 @@ class HomePage extends StatelessWidget {
   Future<void> signOut() async{
     await Auth().signOut();
   }
+
+  Future<void> nextPage() async{
+    await Auth().signOut();
+  }
+
 
   Widget _title(){
     return const Text("Test");
@@ -24,6 +30,15 @@ class HomePage extends StatelessWidget {
      child: const Text("Sign Out")
      );
   }
+
+  Widget _nextPageButton(BuildContext context){
+    return ElevatedButton(onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const LiveMapScreen()));
+          },
+     child: const Text("Next Page")
+     );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,6 +54,7 @@ class HomePage extends StatelessWidget {
           children: <Widget>[
             _userId(),
             _signOutButton(),
+            _nextPageButton(context),
           ],
         ),
       ),
