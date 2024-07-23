@@ -1,139 +1,178 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:intl/intl.dart';
+import 'package:location/location.dart';
+import 'package:stop_watch_timer/stop_watch_timer.dart';
+import 'package:flutter_application/entry.dart';
 
-
-
-class LiveMapScreen extends StatefulWidget {
-const LiveMapScreen({super.key});
-
-@override
-_LiveMapScreenState createState() => _LiveMapScreenState();
+class MapPage extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() => _MapPageState();
 }
 
-class _LiveMapScreenState extends State<LiveMapScreen> {
-GoogleMapController? mapController;
-Set<Polyline> polylines = {};
+class _MapPageState extends State<MapPage> {
+  final Set<Polyline> polyline = {};
+  Location _location = Location();
+  late GoogleMapController _mapController;
+  LatLng _center = const LatLng(0, 0);
+  List<LatLng> route = [];
 
-Set<Marker> markers = Set();
+  double _dist = 0;
+  late String _displayTime;
+  late int _time;
+  late int _lastTime;
+  double _speed = 0;
+  double _avgSpeed = 0;
+  int _speedCounter = 0;
 
-LatLng loc1 = const LatLng(28.612898, 77.365930);
+  final StopWatchTimer _stopWatchTimer = StopWatchTimer();
+  
 
-int numDeltas = 40;
-int delay = 40;
-var i = 0;
-double? deltaLat;
-double? deltaLng;
-var position;
+  @override
+  void initState() {
+    super.initState();
+    _stopWatchTimer.onStartTimer();
+  }
 
-late LatLng pos1;
-late LatLng pos2;
+  @override
+  void dispose() async {
+    super.dispose();
+    await _stopWatchTimer.dispose(); // Need to call dispose function.
+  }
 
-@override
-void initState() {
-position = [loc1.latitude, loc1.longitude];
-pos1 = loc1;
-pos2 = loc1;
-addMarkers();
-super.initState();
-}
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+    double appendDist;
 
-addMarkers() async {
-markers.add(Marker(
-markerId: MarkerId(loc1.toString()),
-position: loc1,
-icon: BitmapDescriptor.defaultMarker));
+    _location.onLocationChanged.listen((event) {
+      LatLng loc = LatLng(event.latitude!, event.longitude!);
+      _mapController.animateCamera(CameraUpdate.newCameraPosition(
+          CameraPosition(target: loc, zoom: 15)));
 
-setState(() {});
-}
+      if (route.length > 0) {
+        appendDist = Geolocator.distanceBetween(route.last.latitude,
+            route.last.longitude, loc.latitude, loc.longitude);
+        _dist = _dist + appendDist;
+        int timeDuration = (_time - _lastTime);
 
-animation(result) {
-i = 0;
-deltaLat = (result[0] - position[0]) / numDeltas;
-deltaLng = (result[1] - position[1]) / numDeltas;
-movingMarker();
-}
+        if (_lastTime != null && timeDuration != 0) {
+          _speed = (appendDist / (timeDuration / 100)) * 3.6;
+          if (_speed != 0) {
+            _avgSpeed = _avgSpeed + _speed;
+            _speedCounter++;
+          }
+        }
+      }
+      _lastTime = _time;
+      route.add(loc);
 
-movingMarker() {
-position[0] += deltaLat;
-position[1] += deltaLng;
-var latlng = LatLng(position[0], position[1]);
+      polyline.add(Polyline(
+          polylineId: PolylineId(event.toString()),
+          visible: true,
+          points: route,
+          width: 5,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+          color: Colors.deepOrange));
 
-markers = {
-Marker(
-markerId: const MarkerId("moving marker"),
-position: latlng,
-icon: BitmapDescriptor.defaultMarker,
-)
-};
+      setState(() {});
+    });
+  }
 
-pos1 = pos2;
-pos2 = LatLng(position[0], position[1]);
-
-polylines.add(Polyline(
-polylineId: PolylineId(pos2.toString()),
-visible: true,
-width: 5,
-//width of polyline
-points: [
-pos1,
-pos2,
-],
-color: Colors.blue, //color of polyline
-));
-
-setState(() {
-//refresh UI
-});
-
-if (i != numDeltas) {
-i++;
-Future.delayed(Duration(milliseconds: delay), () {
-movingMarker();
-});
-}
-}
-
-@override
-Widget build(BuildContext context) {
-return Scaffold(
-appBar: AppBar(
-automaticallyImplyLeading: false,
-title: const Text(
-"Flutter Moving Marker Using Polylines",
-),
-backgroundColor: Colors.red.shade300,
-),
-floatingActionButton: SizedBox(
-height: MediaQuery.of(context).size.height * 0.3,
-width: MediaQuery.of(context).size.width * 0.175,
-child: FloatingActionButton(
-backgroundColor: Colors.red.shade300,
-child: const Center(
-child: Text(
-"Start\nMoving",
-textAlign: TextAlign.center,
-)),
-onPressed: () {
-var result = [28.6279, 77.3749];
-
-animation(result);
-},
-),
-),
-body: GoogleMap(
-zoomGesturesEnabled: true,
-initialCameraPosition: CameraPosition(
-target: loc1,
-zoom: 14.0,
-),
-markers: markers,
-polylines: polylines,
-mapType: MapType.normal,
-onMapCreated: (controller) {
-setState(() {
-mapController = controller;
-});
-},
-));
-}
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        body: Stack(children: [
+      Container(
+          child: GoogleMap(
+        polylines: polyline,
+        zoomControlsEnabled: false,
+        onMapCreated: _onMapCreated,
+        myLocationEnabled: true,
+        initialCameraPosition: CameraPosition(target: _center, zoom: 11),
+      )),
+      Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            width: double.infinity,
+            margin: EdgeInsets.fromLTRB(10, 0, 10, 40),
+            height: 140,
+            padding: EdgeInsets.fromLTRB(20, 10, 20, 10),
+            decoration: BoxDecoration(
+                color: Colors.white, borderRadius: BorderRadius.circular(10)),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      children: [
+                        Text("SPEED (KM/H)",
+                            style: GoogleFonts.montserrat(
+                                fontSize: 10, fontWeight: FontWeight.w300)),
+                        Text(_speed.toStringAsFixed(2),
+                            style: GoogleFonts.montserrat(
+                                fontSize: 30, fontWeight: FontWeight.w300))
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Text("TIME",
+                            style: GoogleFonts.montserrat(
+                                fontSize: 10, fontWeight: FontWeight.w300)),
+                        StreamBuilder<int>(
+                          stream: _stopWatchTimer.rawTime,
+                          initialData: 0,
+                          builder: (context, snap) {
+                            _time = snap.data!;
+                            _displayTime =
+                                StopWatchTimer.getDisplayTimeHours(_time) +
+                                    ":" +
+                                    StopWatchTimer.getDisplayTimeMinute(_time) +
+                                    ":" +
+                                    StopWatchTimer.getDisplayTimeSecond(_time);
+                            return Text(_displayTime,
+                                style: GoogleFonts.montserrat(
+                                    fontSize: 30, fontWeight: FontWeight.w300));
+                          },
+                        )
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Text("DISTANCE (KM)",
+                            style: GoogleFonts.montserrat(
+                                fontSize: 10, fontWeight: FontWeight.w300)),
+                        Text((_dist / 1000).toStringAsFixed(2),
+                            style: GoogleFonts.montserrat(
+                                fontSize: 30, fontWeight: FontWeight.w300))
+                      ],
+                    )
+                  ],
+                ),
+                Divider(),
+                IconButton(
+                  icon: Icon(
+                    Icons.stop_circle_outlined,
+                    size: 50,
+                    color: Colors.redAccent,
+                  ),
+                  padding: EdgeInsets.all(0),
+                  onPressed: () async {
+                    Entry en = Entry(
+                        date: DateFormat.yMMMMd('en_US').format(DateTime.now()),
+                        duration: _displayTime,
+                        speed:
+                            _speedCounter == 0 ? 0 : _avgSpeed / _speedCounter,
+                        distance: _dist, id: 1);
+                    Navigator.pop(context, en);
+                  },
+                )
+              ],
+            ),
+          ))
+    ]));
+  }
 }

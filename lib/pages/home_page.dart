@@ -33,7 +33,7 @@ class HomePage extends StatelessWidget {
 
   Widget _nextPageButton(BuildContext context){
     return ElevatedButton(onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => const LiveMapScreen()));
+            Navigator.push(context, MaterialPageRoute(builder: (context) => MapPage()));
           },
      child: const Text("Next Page")
      );
