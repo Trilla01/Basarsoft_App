@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_application/firebase_options.dart';
 import 'package:flutter_application/pages/splash_screen.dart';
 import 'package:flutter_application/widget_tree.dart';
+//deneme
 
 
 Future <void> main() async {
