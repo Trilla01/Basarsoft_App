@@ -7,14 +7,20 @@ import 'package:location/location.dart';
 import 'package:stop_watch_timer/stop_watch_timer.dart';
 import 'package:flutter_application/entry.dart';
 
+
+Location _location = Location();
+LatLng loc = LatLng(0,0);
+bool firstPress = false;
+
+
 class MapPage extends StatefulWidget {
   @override
   State<StatefulWidget> createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> {
+class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
+  late AnimationController acontroller;
   final Set<Polyline> polyline = {};
-  Location _location = Location();
   late GoogleMapController _mapController;
   LatLng _center = const LatLng(0, 0);
   List<LatLng> route = [];
@@ -33,13 +39,21 @@ class _MapPageState extends State<MapPage> {
   @override
   void initState() {
     super.initState();
-    _stopWatchTimer.onStartTimer();
+    acontroller = AnimationController(
+      duration: Duration(milliseconds: 200),
+      vsync: this
+    );
+
+     WidgetsBinding.instance
+        .addPostFrameCallback((_) async => await fetchLocationUpdates());
+    _stopWatchTimer.onStopTimer();
   }
 
   @override
   void dispose() async {
     super.dispose();
     await _stopWatchTimer.dispose(); // Need to call dispose function.
+    acontroller.dispose();
   }
 
   void _onMapCreated(GoogleMapController controller) {
@@ -47,7 +61,7 @@ class _MapPageState extends State<MapPage> {
     double appendDist;
 
     _location.onLocationChanged.listen((event) {
-      LatLng loc = LatLng(event.latitude!, event.longitude!);
+      
       _mapController.animateCamera(CameraUpdate.newCameraPosition(
           CameraPosition(target: loc, zoom: 15)));
 
@@ -153,21 +167,39 @@ class _MapPageState extends State<MapPage> {
                   ],
                 ),
                 Divider(),
-                IconButton(
-                  icon: Icon(
-                    Icons.stop_circle_outlined,
-                    size: 50,
-                    color: Colors.redAccent,
+                FloatingActionButton(
+                  child: AnimatedBuilder(
+                    animation: acontroller,
+                    builder: (context, child) {
+                      return Icon(acontroller.isAnimating
+                        ? Icons.pause
+                        : Icons.play_arrow);
+                    },
                   ),
-                  padding: EdgeInsets.all(0),
                   onPressed: () async {
-                    Entry en = Entry(
+                    if (acontroller.isAnimating) {
+                      acontroller.stop();
+                    }
+                    else {
+                    acontroller.forward(from: acontroller.value == 0 ? 0.0 : acontroller.value);
+                  }
+                  setState(() {});
+                  
+                    if (firstPress == false) {
+                      _stopWatchTimer.onStartTimer();
+                      firstPress = true;
+                    }
+                    else{
+                      Entry en = Entry(
                         date: DateFormat.yMMMMd('en_US').format(DateTime.now()),
                         duration: _displayTime,
                         speed:
                             _speedCounter == 0 ? 0 : _avgSpeed / _speedCounter,
                         distance: _dist, id: 1);
                     Navigator.pop(context, en);
+                    firstPress = false;
+                    }
+                    
                   },
                 )
               ],
@@ -175,4 +207,37 @@ class _MapPageState extends State<MapPage> {
           ))
     ]));
   }
+
+   Future<void> fetchLocationUpdates() async {
+    bool serviceEnabled;
+    PermissionStatus permissionGranted;
+
+    serviceEnabled = await _location.serviceEnabled();
+    if (serviceEnabled) {
+      serviceEnabled = await _location.requestService();
+    } else {
+      return;
+    }
+
+    permissionGranted = await _location.hasPermission();
+    if (permissionGranted == PermissionStatus.denied) {
+      permissionGranted = await _location.requestPermission();
+      if (permissionGranted != PermissionStatus.granted) {
+        return;
+      }
+    }
+
+    _location.onLocationChanged.listen((currentLocation) {
+      if (currentLocation.latitude != null &&
+          currentLocation.longitude != null) {
+        setState(() {
+          loc = LatLng(
+            currentLocation.latitude!,
+            currentLocation.longitude!,
+          );
+        });
+      }
+    });
+  }
+
 }
