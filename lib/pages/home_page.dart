@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_application/auth.dart';
+import 'package:flutter_application/entrycard.dart';
 import 'package:flutter_application/pages/live_map_screen.dart';
 
 class HomePage extends StatelessWidget {
@@ -33,9 +34,17 @@ class HomePage extends StatelessWidget {
 
   Widget _nextPageButton(BuildContext context){
     return ElevatedButton(onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => Entrycard()));
+          },
+     child: const Text("Past Activities")
+     );
+  }
+
+  Widget _nextPageButton2(BuildContext context){
+    return ElevatedButton(onPressed: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => MapPage()));
           },
-     child: const Text("Next Page")
+     child: const Text("Start an Activity")
      );
   }
 
@@ -55,6 +64,7 @@ class HomePage extends StatelessWidget {
             _userId(),
             _signOutButton(),
             _nextPageButton(context),
+            _nextPageButton2(context),
           ],
         ),
       ),

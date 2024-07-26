@@ -1,8 +1,14 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application/weather.dart';
+import 'package:flutter_application/weather_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_application/db_service.dart';
 import 'package:location/location.dart';
 import 'package:stop_watch_timer/stop_watch_timer.dart';
 import 'package:flutter_application/entry.dart';
@@ -11,6 +17,8 @@ import 'package:flutter_application/entry.dart';
 Location _location = Location();
 LatLng loc = LatLng(0,0);
 bool firstPress = false;
+StreamSubscription<LocationData>? locationSubscription;
+StreamSubscription<LocationData>? locationSubscription2;
 
 
 class MapPage extends StatefulWidget {
@@ -19,6 +27,9 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
+  final _weatherService = WeatherService("49e4e6d626e51e19c365861dc750971e");
+  Weather? _weather;
+  final DbService _dbService = DbService();
   late AnimationController acontroller;
   final Set<Polyline> polyline = {};
   late GoogleMapController _mapController;
@@ -36,9 +47,24 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
   final StopWatchTimer _stopWatchTimer = StopWatchTimer();
   
 
+  _fetchWeather() async{
+    String cityName = await _weatherService.getCurrentCity();
+
+    try {
+      final weather = await _weatherService.getWeather(cityName);
+      setState(() {
+        _weather = weather;
+      });
+      
+    } catch (e) {
+      print(e);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    firstPress = false;
     acontroller = AnimationController(
       duration: Duration(milliseconds: 200),
       vsync: this
@@ -47,6 +73,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
      WidgetsBinding.instance
         .addPostFrameCallback((_) async => await fetchLocationUpdates());
     _stopWatchTimer.onStopTimer();
+  
   }
 
   @override
@@ -54,17 +81,19 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
     super.dispose();
     await _stopWatchTimer.dispose(); // Need to call dispose function.
     acontroller.dispose();
+    locationSubscription!.cancel();
+    locationSubscription2!.cancel();
   }
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
     double appendDist;
-
-    _location.onLocationChanged.listen((event) {
+       locationSubscription2= _location.onLocationChanged.listen((event) {
       
       _mapController.animateCamera(CameraUpdate.newCameraPosition(
           CameraPosition(target: loc, zoom: 15)));
 
+      if(firstPress == true){
       if (route.length > 0) {
         appendDist = Geolocator.distanceBetween(route.last.latitude,
             route.last.longitude, loc.latitude, loc.longitude);
@@ -90,9 +119,11 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
           color: Colors.deepOrange));
-
+      }
       setState(() {});
     });
+    
+   
   }
 
   @override
@@ -191,13 +222,16 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
                     }
                     else{
                       Entry en = Entry(
-                        date: DateFormat.yMMMMd('en_US').format(DateTime.now()),
+                        date: Timestamp.fromDate(DateTime.now()),
                         duration: _displayTime,
                         speed:
                             _speedCounter == 0 ? 0 : _avgSpeed / _speedCounter,
-                        distance: _dist, id: 1);
-                    Navigator.pop(context, en);
-                    firstPress = false;
+                        distance: _dist);
+                    _dbService.addEntry(en);
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
+                    
                     }
                     
                   },
@@ -227,7 +261,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
       }
     }
 
-    _location.onLocationChanged.listen((currentLocation) {
+    locationSubscription =_location.onLocationChanged.listen((currentLocation) {
       if (currentLocation.latitude != null &&
           currentLocation.longitude != null) {
         setState(() {
