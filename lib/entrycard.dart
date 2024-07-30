@@ -1,9 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application/db_service.dart';
+import 'package:flutter_application/pages/activity_details.dart';
 import 'package:flutter_application/pages/home_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_application/entry.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
 
@@ -15,7 +18,7 @@ import 'package:intl/intl.dart';
 }
 
 class _EntrycardState extends State<Entrycard> {
-  final DbService _dbService = DbService();
+  final DbService _dbService = DbService(FirebaseAuth.instance.currentUser!.uid);
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +84,10 @@ class _EntrycardState extends State<Entrycard> {
             (
               child: const Text("View Details"),
               onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => HomePage())
+            Navigator.push(context, MaterialPageRoute(builder: (context) => ActivityDetails(routee: entry.routee,
+      averageSpeed: entry.speed, // Update with actual value
+      totalDistance: entry.distance, // Update with actual value
+      duration: entry.duration))
               ,);},
           )
           ,)

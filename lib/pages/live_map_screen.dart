@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application/weather.dart';
 import 'package:flutter_application/weather_service.dart';
@@ -29,7 +30,7 @@ class MapPage extends StatefulWidget {
 class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
   final _weatherService = WeatherService("49e4e6d626e51e19c365861dc750971e");
   Weather? _weather;
-  final DbService _dbService = DbService();
+  final DbService _dbService = DbService(FirebaseAuth.instance.currentUser!.uid);
   late AnimationController acontroller;
   final Set<Polyline> polyline = {};
   late GoogleMapController _mapController;
@@ -65,6 +66,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
   void initState() {
     super.initState();
     firstPress = false;
+    _fetchWeather();
     acontroller = AnimationController(
       duration: Duration(milliseconds: 200),
       vsync: this
@@ -129,7 +131,13 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        title: Text("New Activity", style: TextStyle(color: Colors.white),),
+      ),
         body: Stack(children: [
+          
+          
       Container(
           child: GoogleMap(
         polylines: polyline,
@@ -138,12 +146,32 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
         myLocationEnabled: true,
         initialCameraPosition: CameraPosition(target: _center, zoom: 11),
       )),
+      Positioned(
+            top: MediaQuery.of(context).size.height/70,
+            left: MediaQuery.of(context).size.width/20,
+            child: Container(
+              width: MediaQuery.of(context).size.width / 2,
+            height: 40,
+            padding: EdgeInsets.fromLTRB(20, 10, 20, 10),
+             decoration: BoxDecoration(
+                color: Colors.white, borderRadius: BorderRadius.circular(10)),
+            child: (Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [Text(_weather?.cityName ?? "Loading city...",
+                            style: GoogleFonts.montserrat(
+                                fontSize: 13, fontWeight: FontWeight.w400)),
+              Text("${_weather?.temperature.round()}°C",
+                            style: GoogleFonts.montserrat(
+                                fontSize: 13, fontWeight: FontWeight.w400))],
+            )),
+            ),
+          ),
       Align(
           alignment: Alignment.bottomCenter,
           child: Container(
             width: double.infinity,
             margin: EdgeInsets.fromLTRB(10, 0, 10, 40),
-            height: 140,
+            height: 150,
             padding: EdgeInsets.fromLTRB(20, 10, 20, 10),
             decoration: BoxDecoration(
                 color: Colors.white, borderRadius: BorderRadius.circular(10)),
@@ -156,17 +184,17 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
                       children: [
                         Text("SPEED (KM/H)",
                             style: GoogleFonts.montserrat(
-                                fontSize: 10, fontWeight: FontWeight.w300)),
+                                fontSize: 13, fontWeight: FontWeight.w300)),
                         Text(_speed.toStringAsFixed(2),
                             style: GoogleFonts.montserrat(
-                                fontSize: 30, fontWeight: FontWeight.w300))
+                                fontSize: 25, fontWeight: FontWeight.w300))
                       ],
                     ),
                     Column(
                       children: [
                         Text("TIME",
                             style: GoogleFonts.montserrat(
-                                fontSize: 10, fontWeight: FontWeight.w300)),
+                                fontSize: 13, fontWeight: FontWeight.w300)),
                         StreamBuilder<int>(
                           stream: _stopWatchTimer.rawTime,
                           initialData: 0,
@@ -180,7 +208,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
                                     StopWatchTimer.getDisplayTimeSecond(_time);
                             return Text(_displayTime,
                                 style: GoogleFonts.montserrat(
-                                    fontSize: 30, fontWeight: FontWeight.w300));
+                                    fontSize: 25, fontWeight: FontWeight.w300));
                           },
                         )
                       ],
@@ -189,10 +217,10 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
                       children: [
                         Text("DISTANCE (KM)",
                             style: GoogleFonts.montserrat(
-                                fontSize: 10, fontWeight: FontWeight.w300)),
+                                fontSize: 13, fontWeight: FontWeight.w300)),
                         Text((_dist / 1000).toStringAsFixed(2),
                             style: GoogleFonts.montserrat(
-                                fontSize: 30, fontWeight: FontWeight.w300))
+                                fontSize: 25, fontWeight: FontWeight.w300))
                       ],
                     )
                   ],
@@ -222,6 +250,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
                     }
                     else{
                       Entry en = Entry(
+                        routee: route,
                         date: Timestamp.fromDate(DateTime.now()),
                         duration: _displayTime,
                         speed:
@@ -230,6 +259,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin{
                     _dbService.addEntry(en);
                     if (Navigator.canPop(context)) {
                       Navigator.pop(context);
+                      locationSubscription!.cancel();
+                      locationSubscription2!.cancel();
                     }
                     
                     }
