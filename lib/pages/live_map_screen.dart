@@ -59,6 +59,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     }
   }
 
+  
+
   @override
   void initState() {
     super.initState();
@@ -157,6 +159,9 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                       style: GoogleFonts.montserrat(
                           fontSize: 13, fontWeight: FontWeight.w400)),
                   Text("${_weather?.temperature.round()}°C",
+                      style: GoogleFonts.montserrat(
+                          fontSize: 13, fontWeight: FontWeight.w400)),
+                          Text(_weather!.condition,
                       style: GoogleFonts.montserrat(
                           fontSize: 13, fontWeight: FontWeight.w400))
                 ],
