@@ -63,6 +63,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '113521609925',
     projectId: 'fir-auth-3331e',
     storageBucket: 'fir-auth-3331e.appspot.com',
+    iosClientId: '113521609925-bf6h4sh6rd1tidsrmfr9n9fmuqen2klh.apps.googleusercontent.com',
     iosBundleId: 'com.example.flutterApplication',
   );
 
@@ -72,6 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '113521609925',
     projectId: 'fir-auth-3331e',
     storageBucket: 'fir-auth-3331e.appspot.com',
+    iosClientId: '113521609925-bf6h4sh6rd1tidsrmfr9n9fmuqen2klh.apps.googleusercontent.com',
     iosBundleId: 'com.example.flutterApplication',
   );
 
@@ -83,4 +85,5 @@ class DefaultFirebaseOptions {
     authDomain: 'fir-auth-3331e.firebaseapp.com',
     storageBucket: 'fir-auth-3331e.appspot.com',
   );
+
 }
