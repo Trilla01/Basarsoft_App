@@ -15,6 +15,7 @@ class WeatherService {
     final response = await http.get(Uri.parse(
       "$BASE_URL?q=$city&appid=$apiKey&units=metric"
     ));
+     
 
     if (response.statusCode == 200) {
       return Weather.fromJson(jsonDecode(response.body));
@@ -29,7 +30,8 @@ class WeatherService {
       permission = await Geolocator.requestPermission();
     }
 
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
+    
 
     List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
 

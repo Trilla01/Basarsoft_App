@@ -31,6 +31,7 @@ dependencies:
   cloud_firestore: ^5.1.0
   google_sign_in: ^6.2.1
   flutter_launcher_icons: ^0.13.1
+  geocode: ^1.0.3
 
 flutter_icons:
   android: true
